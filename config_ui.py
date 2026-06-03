@@ -61,8 +61,10 @@ class ConfigWindow:
         # Base URL (manual entry)
         self.entry_url = tk.Entry(form, font=("Consolas", 9), fg="#555555")
         self.entry_url.grid(row=4, column=0, sticky="ew", pady=(0, 4))
-        # Pre-fill from saved config, and select matching preset
-        saved_url = config.base_url or ""
+        # Pre-fill: use saved config if exists, otherwise default to Mirrorstage
+        saved_url = config.base_url
+        if not saved_url:
+            saved_url = "https://api.mirrorstages.com/anthropic"
         self.entry_url.insert(0, saved_url)
         self._select_preset_for_url(saved_url)
         tk.Label(form, text="Leave blank to use official api.anthropic.com",

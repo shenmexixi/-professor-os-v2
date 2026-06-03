@@ -243,6 +243,17 @@ function connectSSE() {
     await loadData();
     renderSchedulePlan();
   });
+  // Tray pref changes: "pref:{"theme":"dark"}" or "pref:{"font_size":"lg"}"
+  es.onmessage = e => {
+    const data = e.data || '';
+    if (data.startsWith('pref:')) {
+      try {
+        const p = JSON.parse(data.slice(5));
+        if (p.theme) setTheme(p.theme);
+        if (p.font_size) setFontSize(p.font_size);
+      } catch (_) {}
+    }
+  };
 }
 
 async function fetchScheduleEntries() {
@@ -3050,17 +3061,6 @@ document.addEventListener('DOMContentLoaded', () => {
     taskEditOverlay.addEventListener('click', e => {
       if (e.target === taskEditOverlay) closeTaskEditModal();
     });
-  }
-
-  // Handle tray URL params: ?set_theme=dark  ?set_fontsize=lg
-  const _sp = new URLSearchParams(window.location.search);
-  if (_sp.has('set_theme')) {
-    setTheme(_sp.get('set_theme'));
-    history.replaceState(null, '', window.location.pathname);
-  }
-  if (_sp.has('set_fontsize')) {
-    setFontSize(_sp.get('set_fontsize'));
-    history.replaceState(null, '', window.location.pathname);
   }
 });
 

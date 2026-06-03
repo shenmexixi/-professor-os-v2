@@ -55,7 +55,11 @@ def create_app(repo: Repository, conn: sqlite3.Connection) -> FastAPI:
                         break
                     try:
                         msg = queue.get_nowait()
-                        yield {"event": msg, "data": ""}
+                        if msg == "schedule_updated":
+                            yield {"event": "schedule_updated", "data": ""}
+                        else:
+                            # Generic data message (e.g. pref:...)
+                            yield {"data": msg}
                     except asyncio.QueueEmpty:
                         await asyncio.sleep(0.5)
             finally:
@@ -104,6 +108,9 @@ def create_app(repo: Repository, conn: sqlite3.Connection) -> FastAPI:
 
     from web.api.export import router as export_router
     app.include_router(export_router, prefix="/api")
+
+    from web.api.tray_pref import router as tray_pref_router
+    app.include_router(tray_pref_router, prefix="/api")
 
     return app
 
