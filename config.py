@@ -90,5 +90,17 @@ class _ConfigModuleProxy(types.ModuleType):
     def ANTHROPIC_MODEL(self):
         return self._config_obj.model
 
+    @property
+    def DB_PATH(self):
+        return self._config_obj.db_path
+
+    @property
+    def SNAPSHOTS_DIR(self):
+        return self._config_obj.data_dir / 'snapshots'
+
+    @property
+    def LLM_PROVIDER(self):
+        return "claude"
+
 
 sys.modules[__name__] = _ConfigModuleProxy(sys.modules[__name__])
