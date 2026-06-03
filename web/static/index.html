@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Professor OS</title>
+  <script>
+  (function(){
+    var p = JSON.parse(localStorage.getItem('prof_prefs') || '{}');
+    document.documentElement.dataset.theme = p.theme || 'dark';
+    var fsMap = { sm: '1.07', md: '1.21', lg: '1.36' };
+    document.documentElement.style.setProperty('--fs', fsMap[p.fontSize || 'md']);
+  })();
+  </script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<!-- Onboarding screen (shown when DB is empty) -->
+<div id="onboarding">
+  <h2>欢迎使用 Professor OS</h2>
+  <p>用自然语言描述工作全貌，AI 帮你整理成任务；或直接进入界面手动管理。</p>
+
+  <!-- Landing: two entry buttons -->
+  <div id="onboard-landing" style="display:flex;gap:10px;margin-top:4px">
+    <button onclick="showOnboardInput()" style="background:#3fb950;color:#000;border:none;border-radius:6px;padding:8px 22px;font-size:14px;font-weight:600;cursor:pointer">新建任务</button>
+    <button onclick="enterMainLayout()" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px 22px;font-size:14px;cursor:pointer">查看任务</button>
+  </div>
+
+  <!-- Step 1: input (hidden until 新建任务 clicked) -->
+  <div id="onboard-step1" style="display:none">
+    <textarea id="onboarding-text" placeholder="例：目前有一篇纳米发生器论文要返修，6月15截止，张三在跑补充实验……"></textarea>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+      <button id="btn-onboard" style="background:#3fb950;color:#000;border:none;border-radius:6px;padding:8px 20px;font-size:14px;font-weight:600;cursor:pointer">解析</button>
+      <span id="onboard-status" style="color:#8b949e;font-size:13px"></span>
+    </div>
+  </div>
+
+  <!-- Step 2: editable preview (hidden until parse complete) -->
+  <div id="onboard-preview" style="display:none">
+    <div id="onboard-preview-content"></div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:16px;border-top:1px solid var(--border);padding-top:12px">
+      <textarea id="onboard-supplement" placeholder="有需要补充的信息？继续描述，AI 会合并进来…" style="flex:1;min-height:52px;background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;padding:8px 10px;resize:vertical;font-family:inherit;outline:none"></textarea>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <button id="btn-onboard-supplement" style="background:var(--bg3);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:13px;cursor:pointer;white-space:nowrap">补充解析</button>
+        <button id="btn-onboard-confirm" style="background:#3fb950;color:#000;border:none;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap">确认写入</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main layout -->
+<div id="layout" style="display:none">
+  <aside id="sidebar">
+    <div class="logo">Professor OS</div>
+    <nav>
+      <a class="active" onclick="showView('schedule', event)">▶ 今日排期</a>
+      <a onclick="showView('work_items', event)">📋 支线总览</a>
+      <a onclick="showView('people', event)">👥 人员</a>
+      <a onclick="showView('trash', event)">🗑 垃圾桶</a>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="settings" onclick="popUndo()" title="撤销">↩ 撤销</div>
+      <div class="settings-gear" onclick="toggleSettingsPopover()" title="设置">⚙</div>
+      <div id="settings-popover" class="settings-popover" style="display:none">
+        <div class="settings-section">
+          <div class="settings-label">主题</div>
+          <div class="settings-themes">
+            <button class="theme-btn" data-theme="dark"      onclick="setTheme('dark')"      title="深色"></button>
+            <button class="theme-btn" data-theme="dim"       onclick="setTheme('dim')"       title="柔暗"></button>
+            <button class="theme-btn" data-theme="light"     onclick="setTheme('light')"     title="明亮"></button>
+            <button class="theme-btn" data-theme="solarized" onclick="setTheme('solarized')" title="暖色"></button>
+          </div>
+        </div>
+        <div class="settings-section">
+          <div class="settings-label">字号</div>
+          <div class="settings-fontsizes">
+            <button class="fontsize-btn" data-size="sm" onclick="setFontSize('sm')">小</button>
+            <button class="fontsize-btn" data-size="md" onclick="setFontSize('md')">中</button>
+            <button class="fontsize-btn" data-size="lg" onclick="setFontSize('lg')">大</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main id="main">
+    <!-- Input area -->
+    <div id="input-area">
+      <div id="input-wrap">
+        <textarea id="input-text" placeholder="今天有什么进展？（Ctrl+Enter 提交）"></textarea>
+      </div>
+      <div id="input-footer">
+        <span id="input-hint" class="input-hint">Ctrl+Enter 提交</span>
+        <button id="btn-submit">提交</button>
+      </div>
+    </div>
+
+    <!-- Confirm panel (inline, below input) -->
+    <div id="confirm-panel">
+      <h3>AI 解析结果</h3>
+      <div id="confirm-changes"></div>
+      <div id="confirm-questions-wrap" style="display:none">
+        <div id="confirm-questions-label">AI 有以下疑问，可补充说明后重新解析，或直接写入：</div>
+        <div id="confirm-questions"></div>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <textarea id="confirm-supplement" placeholder="补充说明…（可选）" style="flex:1;min-height:44px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;padding:6px 10px;resize:vertical;font-family:inherit;outline:none"></textarea>
+          <button id="btn-reparse" onclick="reparseSupplement()">重新解析</button>
+        </div>
+      </div>
+      <div id="confirm-actions">
+        <button id="btn-confirm">确认写入</button>
+        <button id="btn-cancel">取消</button>
+      </div>
+    </div>
+
+    <!-- Tag chip toolbar -->
+    <div id="tag-toolbar"></div>
+
+    <!-- Dedup banner (hidden until similar tasks detected) -->
+    <div id="dedup-banner">
+      <div id="dedup-banner-header">
+        <span class="dedup-count" id="dedup-count-label"></span>
+        <button id="dedup-toggle" onclick="toggleDedupCards()">查看</button>
+        <button id="btn-llm-scan" onclick="runLlmScan()">AI 深度扫描</button>
+      </div>
+      <div id="dedup-cards" style="display:none"></div>
+    </div>
+
+    <!-- Schedule tree -->
+    <div id="schedule"></div>
+
+    <!-- Work items view -->
+    <div id="work-items" style="display:none;"></div>
+
+    <div id="trash-view" style="display:none;"></div>
+    <div id="people-view" style="display:none;"></div>
+
+    <!-- Meeting panel (slides in from right within people view) -->
+    <div id="meeting-panel" class="meeting-panel">
+      <div class="meeting-panel-inner" id="meeting-panel-inner"></div>
+    </div>
+
+    <!-- Meeting history modal -->
+    <div id="meeting-history-overlay" class="meeting-history-overlay">
+      <div class="meeting-history-modal">
+        <div class="meeting-history-header">
+          <span>历史会议</span>
+          <button onclick="closeMeetingHistory()">×</button>
+        </div>
+        <div id="meeting-history-list"></div>
+      </div>
+    </div>
+
+    <div id="workflow-canvas-root">
+      <div class="canvas-wrap">
+        <div class="canvas-inner">
+          <svg class="canvas-edges-svg"></svg>
+        </div>
+      </div>
+      <div class="canvas-legend">
+        <div class="canvas-legend-row">
+          <svg width="28" height="4"><line x1="0" y1="2" x2="28" y2="2" stroke="#58a6ff" stroke-width="1.5"/></svg>
+          顺序
+        </div>
+        <div class="canvas-legend-row">
+          <svg width="28" height="4"><line x1="0" y1="2" x2="28" y2="2" stroke="#d29922" stroke-width="1.5" stroke-dasharray="4,2"/></svg>
+          依赖
+        </div>
+      </div>
+      <div class="canvas-hint">拖节点右侧蓝点连线（Shift+松开=依赖）· 双击空白添加节点</div>
+    </div>
+  </main>
+</div>
+
+<!-- Delete confirm modal -->
+<div id="delete-modal-overlay">
+  <div id="delete-modal" role="dialog" aria-modal="true" aria-labelledby="delete-modal-title">
+    <h3 id="delete-modal-title">确认删除</h3>
+    <div class="scope-list" id="delete-modal-scope"></div>
+    <div class="modal-actions">
+      <button id="btn-modal-cancel" onclick="closeDeleteModal()">取消</button>
+      <button id="btn-modal-confirm">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- Task edit modal -->
+<div id="task-edit-modal-overlay">
+  <div id="task-edit-modal" role="dialog" aria-modal="true" aria-labelledby="task-edit-modal-title">
+    <h3 id="task-edit-modal-title">编辑任务</h3>
+
+    <div class="task-edit-field">
+      <label for="task-edit-title">任务名</label>
+      <input type="text" id="task-edit-title" autocomplete="off">
+    </div>
+
+    <div class="task-edit-field">
+      <label>所属支线</label>
+      <span id="task-edit-wi-name" class="task-edit-readonly"></span>
+    </div>
+
+    <div class="task-edit-field">
+      <label for="task-edit-status">状态</label>
+      <select id="task-edit-status">
+        <option value="todo">todo</option>
+        <option value="in_progress">in_progress</option>
+        <option value="done">done</option>
+        <option value="blocked">blocked</option>
+      </select>
+    </div>
+
+    <div class="task-edit-field">
+      <label for="task-edit-due">截止日期</label>
+      <input type="date" id="task-edit-due">
+    </div>
+
+    <div class="task-edit-section-label">负责人员</div>
+    <div id="task-edit-people-list"></div>
+    <div class="task-edit-add-row">
+      <input type="text" id="task-edit-new-name" placeholder="输入姓名…" autocomplete="off" list="task-edit-people-datalist">
+      <datalist id="task-edit-people-datalist"></datalist>
+      <select id="task-edit-new-role">
+        <option value="executor">执行人</option>
+        <option value="stakeholder">干系人</option>
+        <option value="owner">负责人</option>
+      </select>
+      <button id="task-edit-add-btn" disabled onclick="taskEditAddPerson()">+</button>
+    </div>
+
+    <div class="modal-actions">
+      <button onclick="closeTaskEditModal()">取消</button>
+      <button id="btn-task-edit-save" onclick="saveTaskEdit()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- Task export modal -->
+<div id="task-export-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1100;align-items:center;justify-content:center">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;width:520px;max-width:95vw;max-height:90vh;display:flex;flex-direction:column;padding:20px;gap:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 style="margin:0;font-size:15px">导出任务</h3>
+      <button onclick="closeTaskExport()" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer">×</button>
+    </div>
+    <!-- Step 1: checklist -->
+    <div id="task-export-step1">
+      <p style="margin:0 0 8px;font-size:12px;color:var(--text-muted)">勾选要导出的支线和任务</p>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button onclick="taskExportSelectAll(true)" style="font-size:12px;padding:3px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer">全选</button>
+        <button onclick="taskExportSelectAll(false)" style="font-size:12px;padding:3px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);cursor:pointer">全不选</button>
+      </div>
+      <div id="task-export-checklist" style="overflow-y:auto;max-height:340px;display:flex;flex-direction:column;gap:4px"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+        <button onclick="closeTaskExport()" style="padding:6px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer">取消</button>
+        <button onclick="taskExportGenerate()" style="padding:6px 16px;background:var(--blue);border:none;border-radius:6px;color:#fff;cursor:pointer">生成</button>
+      </div>
+    </div>
+    <!-- Step 2: result textarea -->
+    <div id="task-export-step2" style="display:none;flex-direction:column;gap:8px">
+      <textarea id="task-export-text" readonly style="width:100%;height:320px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:monospace;font-size:13px;padding:10px;resize:vertical;box-sizing:border-box"></textarea>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button onclick="taskExportBack()" style="padding:6px 16px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;color:var(--text);cursor:pointer">返回</button>
+        <button onclick="taskExportCopy()" style="padding:6px 16px;background:var(--blue);border:none;border-radius:6px;color:#fff;cursor:pointer">复制</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script src="/static/canvas.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
