@@ -5,3 +5,5 @@ fastapi
 uvicorn[standard]
 sse-starlette
 httpx
+pystray>=0.19.0
+pillow>=10.0.0

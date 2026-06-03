@@ -16,7 +16,6 @@ if sys.stderr is None:
 from config import config
 from config_ui import show_config_window
 from db.models import init_db
-import uvicorn
 
 
 def ensure_database():
@@ -29,17 +28,58 @@ def ensure_database():
             init_db(str(config.db_path))
 
 
-def open_browser():
-    time.sleep(2)
+_server = None  # uvicorn Server instance
+
+
+def start_server():
+    """Start uvicorn in a background thread."""
+    import uvicorn
+    from web.app import app
+
+    global _server
+    cfg = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="warning")
+    _server = uvicorn.Server(cfg)
+
+    thread = threading.Thread(target=_server.run, daemon=True)
+    thread.start()
+
+    # Wait until server is ready
+    for _ in range(40):
+        if _server.started:
+            break
+        time.sleep(0.25)
+
+
+def open_browser_delayed():
+    time.sleep(1)
     webbrowser.open("http://127.0.0.1:8000")
 
 
+def quit_app():
+    """Gracefully stop server and exit."""
+    global _server
+    if _server:
+        _server.should_exit = True
+    time.sleep(0.5)
+    os._exit(0)
+
+
+def reopen_config():
+    """Re-open config window (called from tray menu)."""
+    show_config_window()
+    # Restart client with new config (rebuild provider on next parse call)
+    try:
+        from web.app import app as _app
+        if hasattr(_app.state, 'provider') and _app.state.provider:
+            _app.state.provider._client = None  # force lazy rebuild
+    except Exception:
+        pass
+
+
 def main():
-    # 1. Check configuration — show window if not yet configured
+    # 1. Check configuration
     if not config.is_configured:
         skipped = show_config_window()
-        # If user clicked Skip: launch without AI features
-        # If user closed window without saving: exit
         if not skipped and not config.is_configured:
             sys.exit(0)
 
@@ -50,12 +90,19 @@ def main():
     os.environ['ANTHROPIC_API_KEY'] = config.api_key
     os.environ['DB_PATH'] = str(config.db_path)
 
-    # 4. Open browser after short delay
-    threading.Thread(target=open_browser, daemon=True).start()
+    # 4. Start server in background thread
+    start_server()
 
-    # 5. Start web application
-    from web.app import app
-    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="warning")
+    # 5. Open browser once server is up
+    threading.Thread(target=open_browser_delayed, daemon=True).start()
+
+    # 6. Run system tray in main thread (blocking)
+    from tray import run_tray
+    run_tray(
+        on_quit=quit_app,
+        on_open_config=reopen_config,
+        server_url="http://127.0.0.1:8000",
+    )
 
 
 if __name__ == "__main__":
