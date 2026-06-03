@@ -40,6 +40,11 @@ def _repair_json(raw: str) -> str:
 
 class ClaudeProvider(LLMProvider):
     def __init__(self):
+        self._client = None  # lazy — built on first use so API key is available
+
+    def _get_client(self):
+        if self._client is not None:
+            return self._client
         import httpx
         # trust_env=False prevents httpx from picking up Windows registry proxy (Clash on 7890),
         # which intercepts the connection and causes SSL EOF during TLS negotiation with mirrorstages.
@@ -51,6 +56,7 @@ class ClaudeProvider(LLMProvider):
         if config.ANTHROPIC_BASE_URL:
             kwargs["base_url"] = config.ANTHROPIC_BASE_URL
         self._client = anthropic.Anthropic(**kwargs)
+        return self._client
 
     def parse_input(self, text: str, db_context: dict, onboarding: bool = False) -> ParsedResult:
         from parser.prompts import build_onboarding_prompt
@@ -63,7 +69,7 @@ class ClaudeProvider(LLMProvider):
         last_err = None
         for attempt in range(3):
             try:
-                message = self._client.messages.create(
+                message = self._get_client().messages.create(
                     model=config.ANTHROPIC_MODEL,
                     max_tokens=1024,
                     system=system,
@@ -114,7 +120,7 @@ class ClaudeProvider(LLMProvider):
         )
 
     def parse_raw(self, system: str, user: str) -> dict:
-        message = self._client.messages.create(
+        message = self._get_client().messages.create(
             model=config.ANTHROPIC_MODEL,
             max_tokens=2048,
             system=system,
