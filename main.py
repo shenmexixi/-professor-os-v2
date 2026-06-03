@@ -5,6 +5,14 @@ import webbrowser
 import threading
 import time
 from pathlib import Path
+
+# When packaged as a windowless exe (console=False), stdout/stderr are None.
+# Redirect them to devnull so logging/uvicorn don't crash on .isatty().
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, 'w')
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, 'w')
+
 from config import config
 from config_ui import show_config_window
 from db.models import init_db
