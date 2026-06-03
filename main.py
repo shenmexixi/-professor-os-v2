@@ -17,46 +17,37 @@ def ensure_database():
         blank_db = Path(__file__).parent / 'data' / 'blank.db'
         if blank_db.exists():
             shutil.copy(blank_db, config.db_path)
-            print(f"✓ 已初始化数据库: {config.db_path}")
         else:
-            # If blank template doesn't exist, create new database
             init_db(str(config.db_path))
-            print(f"✓ 已创建新数据库: {config.db_path}")
 
 
 def open_browser():
-    """Delay then open browser to application."""
     time.sleep(2)
     webbrowser.open("http://127.0.0.1:8000")
 
 
 def main():
-    # 1. Check configuration
+    # 1. Check configuration — show window if not yet configured
     if not config.is_configured:
-        show_config_window()
-        if not config.is_configured:
-            print("配置已取消，退出程序")
+        skipped = show_config_window()
+        # If user clicked Skip: launch without AI features
+        # If user closed window without saving: exit
+        if not skipped and not config.is_configured:
             sys.exit(0)
 
     # 2. Ensure database exists
     ensure_database()
 
-    # 3. Set environment variables for other modules
+    # 3. Set environment variables for legacy modules
     os.environ['ANTHROPIC_API_KEY'] = config.api_key
     os.environ['DB_PATH'] = str(config.db_path)
 
-    # 4. Start browser in background
+    # 4. Open browser after short delay
     threading.Thread(target=open_browser, daemon=True).start()
 
     # 5. Start web application
-    print("=" * 50)
-    print("Professor OS 正在启动...")
-    print(f"数据库: {config.db_path}")
-    print(f"访问地址: http://127.0.0.1:8000")
-    print("=" * 50)
-
     from web.app import app
-    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info")
+    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="warning")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,8 @@
 import os
+import sys
 import json
 from pathlib import Path
+
 
 class Config:
     def __init__(self):
@@ -36,7 +38,57 @@ class Config:
         self.save()
 
     @property
+    def base_url(self):
+        return self._config.get('base_url', '')
+
+    @base_url.setter
+    def base_url(self, value):
+        self._config['base_url'] = value
+        self.save()
+
+    @property
+    def model(self):
+        return self._config.get('model', 'claude-sonnet-4-6')
+
+    @model.setter
+    def model(self, value):
+        self._config['model'] = value
+        self.save()
+
+    @property
     def is_configured(self):
         return bool(self.api_key)
 
+
 config = Config()
+
+
+# ── Module-level proxy so `import config; config.ANTHROPIC_API_KEY` works ──
+# Other modules do `import config` then access `config.ANTHROPIC_API_KEY` as a
+# module attribute. We replace this module in sys.modules with a proxy that
+# delegates attribute lookups to the Config instance above.
+
+import types
+
+class _ConfigModuleProxy(types.ModuleType):
+    """Wraps the config module so module-level attribute access hits Config."""
+
+    def __init__(self, wrapped):
+        super().__init__(__name__)
+        self.__dict__.update(wrapped.__dict__)
+        self._config_obj = wrapped.config
+
+    @property
+    def ANTHROPIC_API_KEY(self):
+        return self._config_obj.api_key
+
+    @property
+    def ANTHROPIC_BASE_URL(self):
+        return self._config_obj.base_url
+
+    @property
+    def ANTHROPIC_MODEL(self):
+        return self._config_obj.model
+
+
+sys.modules[__name__] = _ConfigModuleProxy(sys.modules[__name__])
