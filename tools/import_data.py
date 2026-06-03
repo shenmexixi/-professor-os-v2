@@ -39,11 +39,11 @@ def import_data(input_file: str, db_path: str | None = None) -> None:
     # --- Validate version ---
     version = str(data.get("export_version", ""))
     if version != SUPPORTED_VERSION:
-        print(f"错误：不支持的导出版本 {version!r}（支持：{SUPPORTED_VERSION}）")
+        print(f"Error: unsupported export version {version!r} (supported: {SUPPORTED_VERSION})")
         sys.exit(1)
 
-    print(f"导入文件: {input_file}")
-    print(f"导出时间: {data.get('exported_at', '未知')}")
+    print(f"Importing: {input_file}")
+    print(f"Exported at: {data.get('exported_at', 'unknown')}")
 
     # --- Counters ---
     wi_inserted = wi_skipped = 0
@@ -69,7 +69,7 @@ def import_data(input_file: str, db_path: str | None = None) -> None:
             wi_title_to_id[title] = new_id
             wi_inserted += 1
 
-    print(f"✓ 支线：新增 {wi_inserted}，跳过（已存在）{wi_skipped}")
+    print(f"[OK] Work items: +{wi_inserted} new, {wi_skipped} skipped")
 
     # --- 2. Ensure source person exists ---
     src = data.get("source_person", {})
@@ -128,12 +128,12 @@ def import_data(input_file: str, db_path: str | None = None) -> None:
             node_title_to_id[node["title"]] = new_node_id
             node_inserted += 1
 
-    print(f"✓ 任务：新增 {task_inserted}，跳过（已存在）{task_skipped}")
+    print(f"[OK] Tasks:      +{task_inserted} new, {task_skipped} skipped")
     if node_inserted:
-        print(f"✓ 节点：{node_inserted}")
+        print(f"[OK] Nodes:      +{node_inserted}")
 
     conn.close()
-    print("\n导入完成！")
+    print("Import complete.")
 
 
 def _find_task(conn: sqlite3.Connection, title: str, wi_id: int | None) -> int | None:

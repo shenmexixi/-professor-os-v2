@@ -30,7 +30,7 @@ def export_person(person_name: str, output_file: str, db_path: str | None = None
     # --- Resolve person ---
     person = repo.get_person_by_name(person_name)
     if not person:
-        print(f"错误：未找到名为「{person_name}」的人员。")
+        print(f"Error: person not found: {person_name!r}")
         sys.exit(1)
 
     person_id = person['id']
@@ -46,7 +46,7 @@ def export_person(person_name: str, output_file: str, db_path: str | None = None
     task_ids = [r[0] for r in rows]
 
     if not task_ids:
-        print(f"警告：「{person_name}」没有关联的任务，导出为空。")
+        print(f"Warning: {person_name!r} has no associated tasks. Export will be empty.")
 
     # --- Collect tasks ---
     tasks_out = []
@@ -122,13 +122,8 @@ def export_person(person_name: str, output_file: str, db_path: str | None = None
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(export_data, f, ensure_ascii=False, indent=2)
 
-    print(f"导出成功: {output_file}")
-    print(f"  人员: {person_name}")
-    print(f"  支线: {len(work_items_out)}")
-    print(f"  任务: {len(tasks_out)}")
     total_nodes = sum(len(t['workflow_nodes']) for t in tasks_out)
-    if total_nodes:
-        print(f"  节点: {total_nodes}")
+    print(f"Exported: {output_file}  (person={person_name}, work_items={len(work_items_out)}, tasks={len(tasks_out)}, nodes={total_nodes})")
 
 
 def _wi_title(conn: sqlite3.Connection, wi_id: int | None) -> str | None:
