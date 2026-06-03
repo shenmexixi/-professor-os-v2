@@ -507,6 +507,15 @@ body { background: var(--bg); color: var(--text); font-family: -apple-system, Bl
 }
 .wi-layout-btn:hover:not(.active) { border-color: var(--text-dim); }
 
+.wi-add-task-row {
+  padding: 4px 10px 6px 28px;
+}
+.wi-add-task-btn {
+  font-size: calc(11px * var(--fs)); color: var(--text-muted); cursor: pointer;
+  padding: 2px 6px; border-radius: 4px; user-select: none;
+}
+.wi-add-task-btn:hover { color: var(--blue); background: var(--bg3); }
+
 .wi-two-col {
   display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;
 }

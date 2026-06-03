@@ -5,11 +5,30 @@ from pydantic import BaseModel
 router = APIRouter()
 
 
+class WorkItemCreate(BaseModel):
+    title: str
+    type: str = "project"
+    importance: int = 3
+    urgency: int = 3
+
+
 class WorkItemPatch(BaseModel):
     title: str | None = None
     importance: int | None = None
     urgency: int | None = None
     sort_order: int | None = None
+
+
+@router.post("/work_item")
+async def create_work_item(body: WorkItemCreate, request: Request):
+    repo = request.app.state.repo
+    new_id = repo.add_work_item(
+        title=body.title,
+        type=body.type,
+        importance=body.importance,
+        urgency=body.urgency,
+    )
+    return {"id": new_id}
 
 
 @router.patch("/work_item/{work_item_id}")

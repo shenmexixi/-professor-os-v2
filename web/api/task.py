@@ -5,12 +5,29 @@ from pydantic import BaseModel
 router = APIRouter()
 
 
+class TaskCreate(BaseModel):
+    title: str
+    work_item_id: int | None = None
+    ownership: str = "self_lead"
+
+
 class TaskPatch(BaseModel):
     title: str | None = None
     priority: int | None = None
     parent_task_id: int | None = None
     follows_task_id: int | None = None
     status: str | None = None
+
+
+@router.post("/task")
+async def create_task(body: TaskCreate, request: Request):
+    repo = request.app.state.repo
+    new_id = repo.add_task(
+        title=body.title,
+        work_item_id=body.work_item_id,
+        ownership=body.ownership,
+    )
+    return {"id": new_id}
 
 
 @router.patch("/task/{task_id}")

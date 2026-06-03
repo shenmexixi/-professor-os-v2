@@ -638,6 +638,35 @@ function startEditTaskTitle(titleEl, task) {
   });
 }
 
+async function quickAddWorkItem() {
+  const title = prompt('新建支线名称：');
+  if (!title || !title.trim()) return;
+  const res = await fetch('/api/work_item', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: title.trim(), type: 'project', importance: 3, urgency: 3 }),
+  });
+  if (res.ok) loadSchedule();
+}
+
+async function quickAddTask(wiId, taskListEl, wi) {
+  const title = prompt('新建任务名称：');
+  if (!title || !title.trim()) return;
+  const res = await fetch('/api/task', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: title.trim(), work_item_id: wiId }),
+  });
+  if (!res.ok) return;
+  const { id } = await res.json();
+  const newTask = { id, title: title.trim(), work_item_id: wiId, status: 'todo', ownership: 'self_lead', due_date: null, workflow_nodes: [] };
+  wi.tasks.push(newTask);
+  const wiTaskById = Object.fromEntries(wi.tasks.map(t => [t.id, t]));
+  // Insert before the "+ 新建任务" row
+  const addRow = taskListEl.querySelector('.wi-add-task-row');
+  taskListEl.insertBefore(makeWiViewTaskRow(newTask, wi, wiTaskById), addRow);
+}
+
 function startEditWiTitle(titleEl, wi) {
   if (titleEl.querySelector('input')) return;
   const oldTitle = wi.title;
@@ -2342,6 +2371,14 @@ function _makeWiBlock(wi, idx) {
   const taskList = document.createElement('div');
   taskList.className = 'wi-view-tasks';
   wi.tasks.forEach(task => taskList.appendChild(makeWiViewTaskRow(task, wi, wiTaskById)));
+
+  // "+ 新建任务" inline row
+  const addTaskRow = document.createElement('div');
+  addTaskRow.className = 'wi-add-task-row';
+  addTaskRow.innerHTML = `<span class="wi-add-task-btn">+ 新建任务</span>`;
+  addTaskRow.querySelector('.wi-add-task-btn').addEventListener('click', () => quickAddTask(wi.id, taskList, wi));
+  taskList.appendChild(addTaskRow);
+
   block.appendChild(taskList);
 
   new Sortable(taskList, {
@@ -2414,6 +2451,7 @@ function renderWorkItems() {
   toolbar.innerHTML = `
     <button class="wi-layout-btn${wiViewLayout === 'single' ? ' active' : ''}" onclick="setWiLayout('single')">单列</button>
     <button class="wi-layout-btn${wiViewLayout === 'double' ? ' active' : ''}" onclick="setWiLayout('double')">双列</button>
+    <button class="wi-layout-btn" onclick="quickAddWorkItem()" style="margin-left:auto">+ 新建支线</button>
   `;
   container.appendChild(toolbar);
 
