@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+data/*.db
+build/
+dist/
+*.spec
+!professor_os.spec
+.venv/
+venv/
+*.pyc
