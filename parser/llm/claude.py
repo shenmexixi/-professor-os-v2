@@ -46,9 +46,9 @@ class ClaudeProvider(LLMProvider):
         if self._client is not None:
             return self._client
         import httpx
-        # trust_env=False prevents httpx from picking up Windows registry proxy (Clash on 7890),
-        # which intercepts the connection and causes SSL EOF during TLS negotiation with mirrorstages.
-        http_client = httpx.Client(http2=False, trust_env=False)
+        # trust_env=True: allow httpx to use system proxy so relay domains are reachable.
+        # Previously set to False to avoid Clash proxy SSL issues, but that breaks relay access.
+        http_client = httpx.Client(http2=False, trust_env=True)
         kwargs = {
             "api_key": config.ANTHROPIC_API_KEY,
             "http_client": http_client,
