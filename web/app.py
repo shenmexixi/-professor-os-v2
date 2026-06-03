@@ -102,6 +102,9 @@ def create_app(repo: Repository, conn: sqlite3.Connection) -> FastAPI:
     from web.api.meetings import router as meetings_router
     app.include_router(meetings_router, prefix="/api")
 
+    from web.api.export import router as export_router
+    app.include_router(export_router, prefix="/api")
+
     return app
 
 

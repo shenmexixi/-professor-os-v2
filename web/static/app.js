@@ -2452,6 +2452,7 @@ function renderWorkItems() {
     <button class="wi-layout-btn${wiViewLayout === 'single' ? ' active' : ''}" onclick="setWiLayout('single')">单列</button>
     <button class="wi-layout-btn${wiViewLayout === 'double' ? ' active' : ''}" onclick="setWiLayout('double')">双列</button>
     <button class="wi-layout-btn" onclick="quickAddWorkItem()" style="margin-left:auto">+ 新建支线</button>
+    <a class="wi-layout-btn" href="/api/export/csv" download title="导出所有数据为 CSV (ZIP)">⬇ 备份导出</a>
   `;
   container.appendChild(toolbar);
 
@@ -3049,6 +3050,17 @@ document.addEventListener('DOMContentLoaded', () => {
     taskEditOverlay.addEventListener('click', e => {
       if (e.target === taskEditOverlay) closeTaskEditModal();
     });
+  }
+
+  // Handle tray URL params: ?set_theme=dark  ?set_fontsize=lg
+  const _sp = new URLSearchParams(window.location.search);
+  if (_sp.has('set_theme')) {
+    setTheme(_sp.get('set_theme'));
+    history.replaceState(null, '', window.location.pathname);
+  }
+  if (_sp.has('set_fontsize')) {
+    setFontSize(_sp.get('set_fontsize'));
+    history.replaceState(null, '', window.location.pathname);
   }
 });
 
