@@ -6,7 +6,7 @@ from config import config
 RELAY_PRESETS = [
     ("Custom / Official", ""),
     ("Rightcode", "https://api.rightcode.cn/v1"),
-    ("Mirrorstage", "https://api.mirrorstage.com"),
+    ("Mirrorstage", "https://api.mirrorstages.com/anthropic"),
 ]
 
 
