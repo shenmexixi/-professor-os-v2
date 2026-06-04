@@ -32,7 +32,7 @@ _server = None  # uvicorn Server instance
 
 
 def start_server():
-    """Start uvicorn in a background thread."""
+    """Start uvicorn in a background thread, return when ready."""
     import uvicorn
     from web.app import app
 
@@ -43,15 +43,15 @@ def start_server():
     thread = threading.Thread(target=_server.run, daemon=True)
     thread.start()
 
-    # Wait until server is ready
-    for _ in range(40):
+    # Wait until server is ready (max 10s)
+    for _ in range(100):
         if _server.started:
-            break
-        time.sleep(0.25)
+            return
+        time.sleep(0.1)
 
 
 def open_browser_delayed():
-    time.sleep(1)
+    time.sleep(0.3)
     webbrowser.open("http://127.0.0.1:8000")
 
 
