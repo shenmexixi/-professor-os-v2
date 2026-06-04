@@ -1902,14 +1902,16 @@ function toggleSchedDatePicker(taskId, rowEl) {
   const existing = rowEl.parentElement.querySelector('.sched-date-picker');
   if (existing) { existing.remove(); return; }
 
+  const entry = scheduleEntries[taskId];
   const picker = document.createElement('div');
   picker.className = 'sched-date-picker';
   picker.innerHTML = `
     <span style="color:var(--text-dim)">排期：</span>
-    <input type="date" id="sched-date-start-${taskId}">
+    <input type="date" id="sched-date-start-${taskId}" value="${entry?.date_start || ''}">
     <span style="color:var(--text-dim)">–</span>
-    <input type="date" id="sched-date-end-${taskId}">
+    <input type="date" id="sched-date-end-${taskId}" value="${entry?.date_end || ''}">
     <button class="sched-date-confirm" onclick="confirmSchedDate(${taskId})">确定</button>
+    <button class="sched-date-cancel" onclick="clearSchedDate(${taskId})">清除</button>
     <button class="sched-date-cancel" onclick="this.closest('.sched-date-picker').remove()">取消</button>
   `;
   rowEl.insertAdjacentElement('afterend', picker);
@@ -1921,6 +1923,13 @@ async function confirmSchedDate(taskId) {
   if (!start || !end) { alert('请填写开始和结束日期'); return; }
   if (start > end) { alert('开始日期不能晚于结束日期'); return; }
   scheduleEntries[taskId] = { is_current: 0, date_start: start, date_end: end };
+  document.querySelector('.sched-date-picker')?.remove();
+  renderSchedulePlan();
+}
+
+function clearSchedDate(taskId) {
+  delete scheduleEntries[taskId];
+  document.querySelector('.sched-date-picker')?.remove();
   renderSchedulePlan();
 }
 
@@ -2175,15 +2184,17 @@ function toggleNodeDatePicker(nodeId, rowEl) {
   const existing = rowEl.parentElement?.querySelector(`.sched-date-picker[data-node-id="${nodeId}"]`);
   if (existing) { existing.remove(); return; }
 
+  const entry = nodeEntries[nodeId];
   const picker = document.createElement('div');
   picker.className = 'sched-date-picker';
   picker.dataset.nodeId = nodeId;
   picker.innerHTML = `
     <span style="color:var(--text-dim)">节点排期：</span>
-    <input type="date" id="node-date-start-${nodeId}">
+    <input type="date" id="node-date-start-${nodeId}" value="${entry?.date_start || ''}">
     <span style="color:var(--text-dim)">–</span>
-    <input type="date" id="node-date-end-${nodeId}">
+    <input type="date" id="node-date-end-${nodeId}" value="${entry?.date_end || ''}">
     <button class="sched-date-confirm" onclick="confirmNodeDate(${nodeId})">确定</button>
+    <button class="sched-date-cancel" onclick="clearNodeDate(${nodeId})">清除</button>
     <button class="sched-date-cancel" onclick="this.closest('.sched-date-picker').remove()">取消</button>
   `;
   rowEl.insertAdjacentElement('afterend', picker);
@@ -2195,6 +2206,13 @@ async function confirmNodeDate(nodeId) {
   if (!start || !end) { alert('请填写开始和结束日期'); return; }
   if (start > end) { alert('开始日期不能晚于结束日期'); return; }
   nodeEntries[nodeId] = { is_current: 0, date_start: start, date_end: end };
+  document.querySelector(`.sched-date-picker[data-node-id="${nodeId}"]`)?.remove();
+  renderSchedulePlan();
+}
+
+function clearNodeDate(nodeId) {
+  delete nodeEntries[nodeId];
+  document.querySelector(`.sched-date-picker[data-node-id="${nodeId}"]`)?.remove();
   renderSchedulePlan();
 }
 

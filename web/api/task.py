@@ -1,6 +1,7 @@
 # web/api/task.py
 from fastapi import APIRouter, Request, HTTPException
 from pydantic import BaseModel
+from typing import Any
 
 router = APIRouter()
 
@@ -12,11 +13,13 @@ class TaskCreate(BaseModel):
 
 
 class TaskPatch(BaseModel):
+    model_config = {"extra": "ignore"}
     title: str | None = None
     priority: int | None = None
     parent_task_id: int | None = None
     follows_task_id: int | None = None
     status: str | None = None
+    due_date: str | None = None
 
 
 @router.post("/task")
@@ -36,7 +39,9 @@ async def patch_task(task_id: int, body: TaskPatch, request: Request):
     task = repo.get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="task not found")
-    kwargs = {k: v for k, v in body.model_dump().items() if v is not None}
+    # exclude_unset=True: explicit None (e.g. clearing due_date) passes through,
+    # but fields not sent by client are excluded
+    kwargs = body.model_dump(exclude_unset=True)
     if kwargs:
         repo.update_task(task_id, **kwargs)
     return {"ok": True}
