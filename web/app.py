@@ -25,12 +25,12 @@ def create_app(repo: Repository, conn: sqlite3.Connection) -> FastAPI:
 
     # Provider is set here; can be overridden in tests
     try:
-        if config.LLM_PROVIDER == "claude":
+        if config.LLM_PROVIDER == "deepseek":
+            from parser.llm.deepseek import DeepSeekProvider
+            app.state.provider = DeepSeekProvider()
+        else:
             from parser.llm.claude import ClaudeProvider
             app.state.provider = ClaudeProvider()
-        else:
-            from parser.llm.ollama import OllamaProvider
-            app.state.provider = OllamaProvider()
     except Exception:
         app.state.provider = None
 
