@@ -24,6 +24,7 @@ a = Analysis(
         'uvicorn.lifespan',
         'uvicorn.lifespan.on',
         'anthropic',
+        'openai',
         'httpx',
         'sqlite3',
         'tkinter',
