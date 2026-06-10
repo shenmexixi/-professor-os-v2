@@ -1,41 +1,10 @@
-# professor-os/parser/llm/claude.py
-import json
-import re
+# parser/llm/claude.py
 from datetime import date
 import anthropic
 from .base import LLMProvider, ParsedResult, ParsedChange
+from .utils import repair_json, extract_json
 from parser.prompts import SYSTEM_PROMPT, build_user_prompt
 import config
-
-
-def _repair_json(raw: str) -> str:
-    """Best-effort repair of common LLM JSON mistakes before parsing."""
-    # Replace full-width / Chinese punctuation
-    raw = raw.replace('，', ',').replace('：', ':').replace('"', '"').replace('"', '"')
-    raw = raw.replace('；', ';').replace('。', '.').replace('\u3001', ',')
-
-    # Fix action names with spaces: "add_work item" -> "add_work_item"
-    raw = re.sub(r'"add_work item"', '"add_work_item"', raw)
-    raw = re.sub(r'"update_work item"', '"update_work_item"', raw)
-
-    # Remove trailing commas before ] or }
-    raw = re.sub(r',\s*([\]}])', r'\1', raw)
-
-    # Fix doubled quotes inside strings like ""title"" -> "title"  (naive fix)
-    raw = re.sub(r'""([^"]+)""', r'"\1"', raw)
-
-    # Fix trailing extra quote before comma/brace: "value"", -> "value",
-    raw = re.sub(r'"",', '",', raw)
-    raw = re.sub(r'""([}\]])', r'"\1', raw)
-    raw = re.sub(r'""(\s*[}\]])', r'"\1', raw)
-
-    # If "changes":[ is followed immediately by "action" without {, insert {
-    # Pattern: [ possibly whitespace then "action" (missing opening brace)
-    raw = re.sub(r'(\[\s*)\n(\s*"action")', r'\1\n{\2', raw)
-    # Also handle comma-separated entries missing {
-    raw = re.sub(r'(,\s*)\n(\s*"action")', r'\1\n{\2', raw)
-
-    return raw
 
 
 class ClaudeProvider(LLMProvider):
@@ -46,8 +15,6 @@ class ClaudeProvider(LLMProvider):
         if self._client is not None:
             return self._client
         import httpx
-        # trust_env=True: allow httpx to use system proxy so relay domains are reachable.
-        # Previously set to False to avoid Clash proxy SSL issues, but that breaks relay access.
         http_client = httpx.Client(http2=False, trust_env=True)
         kwargs = {
             "api_key": config.ANTHROPIC_API_KEY,
@@ -73,9 +40,7 @@ class ClaudeProvider(LLMProvider):
                     model=config.ANTHROPIC_MODEL,
                     max_tokens=1024,
                     system=system,
-                    messages=[
-                        {"role": "user", "content": user},
-                    ],
+                    messages=[{"role": "user", "content": user}],
                 )
                 break
             except anthropic.APIStatusError as e:
@@ -93,25 +58,7 @@ class ClaudeProvider(LLMProvider):
         if not message.content or message.content[0].type != "text":
             raise RuntimeError("LLM returned unexpected response format")
 
-        raw = message.content[0].text.strip()
-
-        # Strip markdown code fences if present
-        json_match = re.search(r'```(?:json)?\s*\n(.*?)\n```', raw, re.DOTALL)
-        if json_match:
-            raw = json_match.group(1).strip()
-
-        # Find the outermost JSON object if extra text is present
-        obj_match = re.search(r'\{.*\}', raw, re.DOTALL)
-        if obj_match:
-            raw = obj_match.group(0)
-
-        raw = _repair_json(raw)
-
-        try:
-            payload = json.loads(raw)
-        except json.JSONDecodeError as e:
-            raise ValueError(f"LLM returned invalid JSON: {raw[:200]}") from e
-
+        payload = extract_json(message.content[0].text.strip())
         changes = [ParsedChange(**c) for c in payload.get("changes", [])
                    if c.get("action") != "add_stakeholder_note"]
         return ParsedResult(
@@ -126,9 +73,4 @@ class ClaudeProvider(LLMProvider):
             system=system,
             messages=[{"role": "user", "content": user}],
         )
-        raw = message.content[0].text.strip()
-        raw = _repair_json(raw)
-        obj = re.search(r'\{.*\}', raw, re.DOTALL)
-        if obj:
-            raw = obj.group(0)
-        return json.loads(raw)
+        return extract_json(message.content[0].text.strip())
