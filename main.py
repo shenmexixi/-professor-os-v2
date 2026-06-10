@@ -67,11 +67,15 @@ def quit_app():
 def reopen_config():
     """Re-open config window (called from tray menu)."""
     show_config_window()
-    # Restart client with new config (rebuild provider on next parse call)
+    # Rebuild provider with new config
     try:
         from web.app import app as _app
-        if hasattr(_app.state, 'provider') and _app.state.provider:
-            _app.state.provider._client = None  # force lazy rebuild
+        if config.LLM_PROVIDER == "deepseek":
+            from parser.llm.deepseek import DeepSeekProvider
+            _app.state.provider = DeepSeekProvider()
+        else:
+            from parser.llm.claude import ClaudeProvider
+            _app.state.provider = ClaudeProvider()
     except Exception:
         pass
 
