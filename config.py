@@ -56,6 +56,15 @@ class Config:
         self.save()
 
     @property
+    def provider(self):
+        return self._config.get('provider', 'claude')
+
+    @provider.setter
+    def provider(self, value):
+        self._config['provider'] = value
+        self.save()
+
+    @property
     def is_configured(self):
         return bool(self.api_key)
 
@@ -100,7 +109,7 @@ class _ConfigModuleProxy(types.ModuleType):
 
     @property
     def LLM_PROVIDER(self):
-        return "claude"
+        return self._config_obj.provider
 
 
 sys.modules[__name__] = _ConfigModuleProxy(sys.modules[__name__])
