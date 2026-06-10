@@ -2,7 +2,7 @@
 from datetime import date
 import anthropic
 from .base import LLMProvider, ParsedResult, ParsedChange
-from .utils import repair_json, extract_json
+from .utils import extract_json
 from parser.prompts import SYSTEM_PROMPT, build_user_prompt
 import config
 
