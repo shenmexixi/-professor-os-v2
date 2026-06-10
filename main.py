@@ -77,7 +77,11 @@ def reopen_config():
             from parser.llm.claude import ClaudeProvider
             _app.state.provider = ClaudeProvider()
     except Exception:
-        pass
+        try:
+            from web.app import app as _app
+            _app.state.provider = None
+        except Exception:
+            pass
 
 
 def main():
