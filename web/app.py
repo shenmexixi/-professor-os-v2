@@ -24,6 +24,8 @@ def create_app(repo: Repository, conn: sqlite3.Connection) -> FastAPI:
     app.state.sse_subscribers: list = []
 
     # Provider is set here; can be overridden in tests
+    app.state.provider = None
+    app.state.provider_error = None
     try:
         if config.LLM_PROVIDER == "deepseek":
             from parser.llm.deepseek import DeepSeekProvider
@@ -31,8 +33,9 @@ def create_app(repo: Repository, conn: sqlite3.Connection) -> FastAPI:
         else:
             from parser.llm.claude import ClaudeProvider
             app.state.provider = ClaudeProvider()
-    except Exception:
-        app.state.provider = None
+    except Exception as e:
+        import traceback
+        app.state.provider_error = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
 
     # Mount static files
     static_dir = Path(__file__).parent / "static"

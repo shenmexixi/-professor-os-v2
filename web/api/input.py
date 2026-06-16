@@ -20,6 +20,11 @@ async def post_input(body: InputRequest, request: Request):
 
     input_id = repo.save_input(raw_text=body.text)
 
+    if provider is None:
+        err = getattr(request.app.state, "provider_error", None)
+        detail = err or "LLM provider 未初始化，请检查 API Key / Provider 设置后重启程序"
+        return {"error": f"LLM provider 未就绪：{detail}", "input_id": input_id, "changes": [], "pending_questions": []}
+
     db_context = repo.get_db_context()
     try:
         result = parse_input(body.text, db_context=db_context, provider=provider, onboarding=body.is_onboarding)

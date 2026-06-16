@@ -68,20 +68,19 @@ def reopen_config():
     """Re-open config window (called from tray menu)."""
     show_config_window()
     # Rebuild provider with new config
+    from web.app import app as _app
+    _app.state.provider = None
+    _app.state.provider_error = None
     try:
-        from web.app import app as _app
-        if config.LLM_PROVIDER == "deepseek":
+        if config.provider == "deepseek":
             from parser.llm.deepseek import DeepSeekProvider
             _app.state.provider = DeepSeekProvider()
         else:
             from parser.llm.claude import ClaudeProvider
             _app.state.provider = ClaudeProvider()
-    except Exception:
-        try:
-            from web.app import app as _app
-            _app.state.provider = None
-        except Exception:
-            pass
+    except Exception as e:
+        import traceback
+        _app.state.provider_error = f"{type(e).__name__}: {e}\n{traceback.format_exc()}"
 
 
 def main():
